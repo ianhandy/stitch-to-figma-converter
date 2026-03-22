@@ -1,0 +1,1616 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Stitch → Figma Converter</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg-deep: #241200;
+      --bg-card: #1A0D00;
+      --gold: #DDC165;
+      --gold-light: #FFE9A3;
+      --orange: #E5591C;
+      --text: #F5E6D3;
+      --text-dim: #9B8A7A;
+      --border: rgba(221, 193, 101, 0.15);
+      --glow-gold: rgba(221, 193, 101, 0.3);
+      --glow-orange: rgba(229, 89, 28, 0.4);
+    }
+
+    @font-face {
+      font-family: 'Inter';
+      src: local('Inter'), local('Inter-Regular');
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: var(--bg-deep);
+      color: var(--text);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* Ambient background glow */
+    body::before {
+      content: '';
+      position: fixed;
+      top: -50%;
+      left: -50%;
+      width: 200%;
+      height: 200%;
+      background: radial-gradient(ellipse at 30% 20%, rgba(229, 89, 28, 0.06) 0%, transparent 50%),
+                  radial-gradient(ellipse at 70% 80%, rgba(221, 193, 101, 0.04) 0%, transparent 50%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* Header */
+    .header {
+      position: relative;
+      z-index: 1;
+      padding: 2rem 2rem 1rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .logo-icon {
+      width: 40px;
+      height: 40px;
+      position: relative;
+    }
+
+    .logo-icon svg {
+      width: 100%;
+      height: 100%;
+    }
+
+    .logo h1 {
+      font-size: 1.25rem;
+      font-weight: 600;
+      color: var(--gold);
+      letter-spacing: -0.02em;
+    }
+
+    .logo h1 span {
+      color: var(--orange);
+    }
+
+    .badge {
+      font-size: 0.65rem;
+      background: rgba(229, 89, 28, 0.15);
+      color: var(--orange);
+      padding: 0.2rem 0.5rem;
+      border-radius: 4px;
+      border: 1px solid rgba(229, 89, 28, 0.3);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      font-weight: 600;
+    }
+
+    /* Main layout */
+    .main {
+      position: relative;
+      z-index: 1;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.5rem;
+      padding: 1rem 2rem 2rem;
+      height: calc(100vh - 80px);
+    }
+
+    /* Panels */
+    .panel {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      transition: border-color 0.3s ease;
+    }
+
+    .panel:focus-within {
+      border-color: rgba(221, 193, 101, 0.35);
+      box-shadow: 0 0 30px rgba(221, 193, 101, 0.05);
+    }
+
+    .panel-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.75rem 1rem;
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+
+    .panel-title {
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--gold);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .panel-title .dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--orange);
+      box-shadow: 0 0 8px var(--glow-orange);
+    }
+
+    .panel-actions {
+      display: flex;
+      gap: 0.5rem;
+    }
+
+    /* Buttons */
+    .btn {
+      font-family: inherit;
+      font-size: 0.75rem;
+      font-weight: 500;
+      padding: 0.4rem 0.75rem;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--text-dim);
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      gap: 0.35rem;
+    }
+
+    .btn:hover {
+      color: var(--text);
+      border-color: rgba(221, 193, 101, 0.3);
+      background: rgba(221, 193, 101, 0.05);
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--orange), #c94a15);
+      border-color: var(--orange);
+      color: white;
+      font-weight: 600;
+    }
+
+    .btn-primary:hover {
+      background: linear-gradient(135deg, #ff6b2e, var(--orange));
+      box-shadow: 0 0 20px var(--glow-orange);
+    }
+
+    .btn-primary:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+      box-shadow: none;
+    }
+
+    .btn-gold {
+      border-color: rgba(221, 193, 101, 0.3);
+      color: var(--gold);
+    }
+
+    .btn-gold:hover {
+      background: rgba(221, 193, 101, 0.1);
+      box-shadow: 0 0 15px var(--glow-gold);
+    }
+
+    /* Editor */
+    .editor-area {
+      flex: 1;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .editor-area textarea {
+      width: 100%;
+      height: 100%;
+      background: transparent;
+      border: none;
+      color: var(--text);
+      font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+      font-size: 0.8rem;
+      line-height: 1.7;
+      padding: 1rem;
+      resize: none;
+      outline: none;
+      tab-size: 2;
+    }
+
+    .editor-area textarea::placeholder {
+      color: var(--text-dim);
+      opacity: 0.5;
+    }
+
+    /* Output area */
+    .output-area {
+      flex: 1;
+      overflow: auto;
+      position: relative;
+    }
+
+    .output-area pre {
+      font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+      font-size: 0.78rem;
+      line-height: 1.7;
+      padding: 1rem;
+      color: var(--text);
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    /* Tabs */
+    .tabs {
+      display: flex;
+      gap: 0;
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+
+    .tab {
+      font-family: inherit;
+      font-size: 0.75rem;
+      font-weight: 500;
+      padding: 0.6rem 1rem;
+      border: none;
+      background: transparent;
+      color: var(--text-dim);
+      cursor: pointer;
+      transition: all 0.2s ease;
+      position: relative;
+      border-bottom: 2px solid transparent;
+    }
+
+    .tab:hover {
+      color: var(--text);
+    }
+
+    .tab.active {
+      color: var(--gold);
+      border-bottom-color: var(--orange);
+    }
+
+    /* Tree view */
+    .tree-view {
+      flex: 1;
+      overflow: auto;
+      padding: 1rem;
+    }
+
+    .tree-node {
+      margin-left: 1.25rem;
+      position: relative;
+    }
+
+    .tree-node::before {
+      content: '';
+      position: absolute;
+      left: -0.75rem;
+      top: 0;
+      bottom: 0;
+      width: 1px;
+      background: var(--border);
+    }
+
+    .tree-node:last-child::before {
+      bottom: 50%;
+    }
+
+    .tree-label {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.25rem 0.5rem;
+      border-radius: 4px;
+      font-size: 0.78rem;
+      cursor: pointer;
+      transition: background 0.15s ease;
+      position: relative;
+    }
+
+    .tree-label::before {
+      content: '';
+      position: absolute;
+      left: -0.75rem;
+      top: 50%;
+      width: 0.75rem;
+      height: 1px;
+      background: var(--border);
+    }
+
+    .tree-label:hover {
+      background: rgba(221, 193, 101, 0.08);
+    }
+
+    .tree-tag {
+      color: var(--orange);
+      font-weight: 600;
+      font-family: 'SF Mono', 'Fira Code', monospace;
+      font-size: 0.72rem;
+    }
+
+    .tree-class {
+      color: var(--gold);
+      font-size: 0.7rem;
+      opacity: 0.7;
+    }
+
+    .tree-type {
+      font-size: 0.65rem;
+      color: var(--text-dim);
+      background: rgba(255,255,255,0.05);
+      padding: 0.1rem 0.35rem;
+      border-radius: 3px;
+    }
+
+    .tree-toggle {
+      width: 14px;
+      height: 14px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.6rem;
+      color: var(--text-dim);
+      cursor: pointer;
+      transition: transform 0.2s ease;
+      flex-shrink: 0;
+    }
+
+    .tree-toggle.collapsed {
+      transform: rotate(-90deg);
+    }
+
+    .tree-children {
+      overflow: hidden;
+      transition: max-height 0.3s ease;
+    }
+
+    .tree-children.collapsed {
+      max-height: 0 !important;
+    }
+
+    /* Preview panel */
+    .preview-frame {
+      flex: 1;
+      border: none;
+      background: white;
+      border-radius: 0 0 12px 12px;
+    }
+
+    /* Status bar */
+    .status-bar {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.5rem 2rem;
+      border-top: 1px solid var(--border);
+      font-size: 0.7rem;
+      color: var(--text-dim);
+    }
+
+    .status-left, .status-right {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .status-indicator {
+      display: flex;
+      align-items: center;
+      gap: 0.35rem;
+    }
+
+    .status-indicator .pulse {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #4ade80;
+      animation: pulse 2s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; box-shadow: 0 0 4px rgba(74, 222, 128, 0.5); }
+      50% { opacity: 0.5; box-shadow: 0 0 8px rgba(74, 222, 128, 0.3); }
+    }
+
+    /* Empty state */
+    .empty-state {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-dim);
+      gap: 1rem;
+      padding: 2rem;
+    }
+
+    .empty-state svg {
+      opacity: 0.3;
+    }
+
+    .empty-state p {
+      font-size: 0.85rem;
+      text-align: center;
+      line-height: 1.6;
+    }
+
+    .empty-state .hint {
+      font-size: 0.75rem;
+      opacity: 0.6;
+    }
+
+    /* Syntax highlighting in output */
+    .json-key { color: var(--gold); }
+    .json-string { color: #8FBC8F; }
+    .json-number { color: var(--orange); }
+    .json-bool { color: #87CEEB; }
+    .json-null { color: var(--text-dim); }
+    .json-bracket { color: var(--text-dim); }
+
+    /* Toast notifications */
+    .toast {
+      position: fixed;
+      bottom: 2rem;
+      right: 2rem;
+      background: var(--bg-card);
+      border: 1px solid var(--gold);
+      border-radius: 8px;
+      padding: 0.75rem 1.25rem;
+      color: var(--gold);
+      font-size: 0.8rem;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.4), 0 0 15px var(--glow-gold);
+      transform: translateY(100px);
+      opacity: 0;
+      transition: all 0.3s ease;
+      z-index: 100;
+    }
+
+    .toast.show {
+      transform: translateY(0);
+      opacity: 1;
+    }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb {
+      background: rgba(221, 193, 101, 0.15);
+      border-radius: 3px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: rgba(221, 193, 101, 0.3);
+    }
+
+    /* Convert animation */
+    .converting .panel-title .dot {
+      animation: convertPulse 0.5s ease-in-out infinite;
+    }
+
+    @keyframes convertPulse {
+      0%, 100% { background: var(--orange); box-shadow: 0 0 8px var(--glow-orange); }
+      50% { background: var(--gold); box-shadow: 0 0 12px var(--glow-gold); }
+    }
+
+    /* Responsive */
+    @media (max-width: 900px) {
+      .main {
+        grid-template-columns: 1fr;
+        height: auto;
+      }
+      .panel { min-height: 400px; }
+    }
+
+    /* Figma node count badge */
+    .node-count {
+      font-size: 0.65rem;
+      background: rgba(229, 89, 28, 0.15);
+      color: var(--orange);
+      padding: 0.15rem 0.45rem;
+      border-radius: 4px;
+      font-weight: 600;
+    }
+
+    /* Settings modal */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.6);
+      z-index: 50;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      backdrop-filter: blur(4px);
+    }
+
+    .modal-overlay.show {
+      display: flex;
+    }
+
+    .modal {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.5rem;
+      width: 90%;
+      max-width: 500px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+    }
+
+    .modal h2 {
+      font-size: 1rem;
+      color: var(--gold);
+      margin-bottom: 1rem;
+    }
+
+    .modal label {
+      font-size: 0.78rem;
+      color: var(--text-dim);
+      display: block;
+      margin-bottom: 0.35rem;
+    }
+
+    .modal input, .modal select {
+      width: 100%;
+      background: var(--bg-deep);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 0.5rem 0.75rem;
+      color: var(--text);
+      font-family: inherit;
+      font-size: 0.8rem;
+      margin-bottom: 1rem;
+      outline: none;
+    }
+
+    .modal input:focus, .modal select:focus {
+      border-color: rgba(221, 193, 101, 0.4);
+    }
+
+    .modal-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 0.5rem;
+    }
+
+    /* Drag & drop highlight */
+    .editor-area.dragover {
+      background: rgba(229, 89, 28, 0.05);
+    }
+
+    .editor-area.dragover::after {
+      content: 'Drop HTML file here';
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--orange);
+      font-size: 1rem;
+      font-weight: 600;
+      border: 2px dashed rgba(229, 89, 28, 0.4);
+      border-radius: 0 0 12px 12px;
+      background: rgba(229, 89, 28, 0.03);
+      pointer-events: none;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Header -->
+  <header class="header">
+    <div class="logo">
+      <div class="logo-icon">
+        <svg viewBox="0 0 40 40" fill="none">
+          <rect x="4" y="4" width="14" height="14" rx="2" stroke="#E5591C" stroke-width="2" fill="none"/>
+          <rect x="22" y="4" width="14" height="14" rx="2" stroke="#DDC165" stroke-width="2" fill="none"/>
+          <rect x="4" y="22" width="14" height="14" rx="2" stroke="#DDC165" stroke-width="2" fill="none"/>
+          <rect x="22" y="22" width="14" height="14" rx="2" stroke="#E5591C" stroke-width="2" fill="none"/>
+          <path d="M18 11h4M11 18v4M29 18v4M18 29h4" stroke="#FFE9A3" stroke-width="1.5" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <h1>Stitch <span>→</span> Figma</h1>
+      <span class="badge">Converter</span>
+    </div>
+    <div class="panel-actions">
+      <button class="btn" onclick="loadSample()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        Sample
+      </button>
+      <button class="btn" onclick="openSettings()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        Settings
+      </button>
+    </div>
+  </header>
+
+  <!-- Main -->
+  <main class="main">
+    <!-- Input Panel -->
+    <div class="panel" id="inputPanel">
+      <div class="panel-header">
+        <span class="panel-title"><span class="dot"></span> HTML / CSS Input</span>
+        <div class="panel-actions">
+          <button class="btn" onclick="clearInput()">Clear</button>
+          <button class="btn btn-primary" id="convertBtn" onclick="convert()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+            Convert
+          </button>
+        </div>
+      </div>
+      <div class="editor-area" id="editorArea">
+        <textarea id="htmlInput" spellcheck="false" placeholder="Paste your Stitch HTML/CSS output here...&#10;&#10;Supports:&#10;  • Full HTML documents&#10;  • HTML fragments&#10;  • Inline styles&#10;  • Class-based styles&#10;&#10;Drag & drop .html files also works."></textarea>
+      </div>
+    </div>
+
+    <!-- Output Panel -->
+    <div class="panel" id="outputPanel">
+      <div class="panel-header">
+        <span class="panel-title">
+          <span class="dot"></span> Figma Output
+          <span class="node-count" id="nodeCount" style="display:none">0 nodes</span>
+        </span>
+        <div class="panel-actions">
+          <button class="btn btn-gold" id="copyBtn" onclick="copyOutput()" style="display:none">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+            Copy JSON
+          </button>
+          <button class="btn" id="downloadBtn" onclick="downloadOutput()" style="display:none">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            Download
+          </button>
+        </div>
+      </div>
+      <div class="tabs" id="outputTabs">
+        <button class="tab active" data-tab="tree" onclick="switchTab('tree')">Tree</button>
+        <button class="tab" data-tab="json" onclick="switchTab('json')">Figma JSON</button>
+        <button class="tab" data-tab="preview" onclick="switchTab('preview')">Preview</button>
+        <button class="tab" data-tab="plugin" onclick="switchTab('plugin')">Plugin Code</button>
+      </div>
+      <div class="output-area" id="treeOutput">
+        <div class="empty-state" id="emptyState">
+          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1">
+            <rect x="3" y="3" width="7" height="7" rx="1"/>
+            <rect x="14" y="3" width="7" height="7" rx="1"/>
+            <rect x="3" y="14" width="7" height="7" rx="1"/>
+            <rect x="14" y="14" width="7" height="7" rx="1"/>
+            <line x1="10" y1="6.5" x2="14" y2="6.5"/>
+            <line x1="6.5" y1="10" x2="6.5" y2="14"/>
+          </svg>
+          <p>Paste Stitch HTML/CSS and click <strong>Convert</strong></p>
+          <p class="hint">Your HTML will be parsed into a Figma-compatible node tree</p>
+        </div>
+      </div>
+      <div class="output-area" id="jsonOutput" style="display:none">
+        <pre id="jsonPre"></pre>
+      </div>
+      <div class="output-area" id="previewOutput" style="display:none">
+        <iframe class="preview-frame" id="previewFrame" sandbox="allow-scripts"></iframe>
+      </div>
+      <div class="output-area" id="pluginOutput" style="display:none">
+        <pre id="pluginPre"></pre>
+      </div>
+    </div>
+  </main>
+
+  <!-- Status Bar -->
+  <div class="status-bar">
+    <div class="status-left">
+      <span class="status-indicator"><span class="pulse"></span> Ready</span>
+      <span id="statusText">Paste HTML to begin</span>
+    </div>
+    <div class="status-right">
+      <span>Stitch 2.0 Compatible</span>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div class="toast" id="toast"></div>
+
+  <!-- Settings Modal -->
+  <div class="modal-overlay" id="settingsModal">
+    <div class="modal">
+      <h2>Conversion Settings</h2>
+      <label>Base Font Size (px)</label>
+      <input type="number" id="baseFontSize" value="16" min="8" max="32">
+      <label>Auto-layout Mode</label>
+      <select id="autoLayoutMode">
+        <option value="auto">Auto-detect</option>
+        <option value="vertical">Force Vertical</option>
+        <option value="horizontal">Force Horizontal</option>
+        <option value="none">No Auto-layout</option>
+      </select>
+      <label>Color Format</label>
+      <select id="colorFormat">
+        <option value="rgba">RGBA (Figma native)</option>
+        <option value="hex">Hex</option>
+      </select>
+      <label>Include Text Styles</label>
+      <select id="includeTextStyles">
+        <option value="yes">Yes</option>
+        <option value="no">No</option>
+      </select>
+      <div class="modal-actions">
+        <button class="btn" onclick="closeSettings()">Cancel</button>
+        <button class="btn btn-primary" onclick="closeSettings()">Apply</button>
+      </div>
+    </div>
+  </div>
+
+<script>
+// ============================================================
+// Stitch-to-Figma Converter — Core Engine
+// ============================================================
+
+let currentFigmaTree = null;
+let currentNodeCount = 0;
+
+// ---- Color parsing ----
+function parseColor(str) {
+  if (!str || str === 'transparent') return null;
+  str = str.trim();
+
+  // Named colors
+  const named = {
+    white: [255,255,255], black: [0,0,0], red: [255,0,0], green: [0,128,0],
+    blue: [0,0,255], gray: [128,128,128], grey: [128,128,128], yellow: [255,255,0],
+    orange: [255,165,0], purple: [128,0,128], pink: [255,192,203],
+  };
+  if (named[str.toLowerCase()]) {
+    const [r,g,b] = named[str.toLowerCase()];
+    return { r: r/255, g: g/255, b: b/255, a: 1 };
+  }
+
+  // Hex
+  const hexMatch = str.match(/^#([0-9a-f]{3,8})$/i);
+  if (hexMatch) {
+    let hex = hexMatch[1];
+    if (hex.length === 3) hex = hex[0]+hex[0]+hex[1]+hex[1]+hex[2]+hex[2];
+    if (hex.length === 4) hex = hex[0]+hex[0]+hex[1]+hex[1]+hex[2]+hex[2]+hex[3]+hex[3];
+    const r = parseInt(hex.slice(0,2), 16) / 255;
+    const g = parseInt(hex.slice(2,4), 16) / 255;
+    const b = parseInt(hex.slice(4,6), 16) / 255;
+    const a = hex.length === 8 ? parseInt(hex.slice(6,8), 16) / 255 : 1;
+    return { r, g, b, a };
+  }
+
+  // rgb/rgba
+  const rgbMatch = str.match(/rgba?\(\s*([\d.]+)[\s,]+([\d.]+)[\s,]+([\d.]+)(?:[\s,/]+([\d.]+%?))?\s*\)/);
+  if (rgbMatch) {
+    let a = 1;
+    if (rgbMatch[4]) {
+      a = rgbMatch[4].endsWith('%') ? parseFloat(rgbMatch[4])/100 : parseFloat(rgbMatch[4]);
+    }
+    return {
+      r: parseFloat(rgbMatch[1]) / 255,
+      g: parseFloat(rgbMatch[2]) / 255,
+      b: parseFloat(rgbMatch[3]) / 255,
+      a
+    };
+  }
+
+  return null;
+}
+
+// ---- Parse CSS value units ----
+function parseDimension(val) {
+  if (!val || val === 'auto' || val === 'none') return null;
+  const num = parseFloat(val);
+  if (isNaN(num)) return null;
+  return num;
+}
+
+function parsePadding(styles) {
+  const p = {
+    paddingTop: parseDimension(styles.paddingTop) || 0,
+    paddingRight: parseDimension(styles.paddingRight) || 0,
+    paddingBottom: parseDimension(styles.paddingBottom) || 0,
+    paddingLeft: parseDimension(styles.paddingLeft) || 0,
+  };
+  return p;
+}
+
+// ---- Figma border radius ----
+function parseBorderRadius(styles) {
+  const r = parseDimension(styles.borderRadius);
+  if (r) return { topLeftRadius: r, topRightRadius: r, bottomRightRadius: r, bottomLeftRadius: r };
+  return {
+    topLeftRadius: parseDimension(styles.borderTopLeftRadius) || 0,
+    topRightRadius: parseDimension(styles.borderTopRightRadius) || 0,
+    bottomRightRadius: parseDimension(styles.borderBottomRightRadius) || 0,
+    bottomLeftRadius: parseDimension(styles.borderBottomLeftRadius) || 0,
+  };
+}
+
+// ---- Detect auto-layout direction ----
+function detectLayoutMode(styles) {
+  const setting = document.getElementById('autoLayoutMode').value;
+  if (setting === 'vertical') return 'VERTICAL';
+  if (setting === 'horizontal') return 'HORIZONTAL';
+  if (setting === 'none') return 'NONE';
+
+  const display = styles.display;
+  const flexDir = styles.flexDirection || 'row';
+
+  if (display === 'flex' || display === 'inline-flex') {
+    return flexDir.startsWith('column') ? 'VERTICAL' : 'HORIZONTAL';
+  }
+  if (display === 'grid' || display === 'inline-grid') {
+    return 'VERTICAL'; // Simplified grid → vertical
+  }
+  // Block elements default to vertical stacking
+  if (display === 'block' || display === '' || !display) {
+    return 'VERTICAL';
+  }
+  return 'NONE';
+}
+
+// ---- Detect alignment ----
+function mapAlignment(justify, align) {
+  const jMap = { 'flex-start': 'MIN', 'start': 'MIN', 'center': 'CENTER', 'flex-end': 'MAX', 'end': 'MAX', 'space-between': 'SPACE_BETWEEN' };
+  const aMap = { 'flex-start': 'MIN', 'start': 'MIN', 'center': 'CENTER', 'flex-end': 'MAX', 'end': 'MAX', 'stretch': 'STRETCH', 'baseline': 'MIN' };
+  return {
+    primaryAxisAlignItems: jMap[justify] || 'MIN',
+    counterAxisAlignItems: aMap[align] || 'MIN',
+  };
+}
+
+// ---- Map font weight ----
+function mapFontWeight(weight) {
+  const w = parseInt(weight) || 400;
+  if (w <= 100) return 'Thin';
+  if (w <= 200) return 'ExtraLight';
+  if (w <= 300) return 'Light';
+  if (w <= 400) return 'Regular';
+  if (w <= 500) return 'Medium';
+  if (w <= 600) return 'SemiBold';
+  if (w <= 700) return 'Bold';
+  if (w <= 800) return 'ExtraBold';
+  return 'Black';
+}
+
+// ---- Convert HTML element to Figma node ----
+function elementToFigmaNode(el, computedStylesMap, depth = 0) {
+  const tag = el.tagName.toLowerCase();
+  const id = el.id;
+  const classes = Array.from(el.classList || []);
+  const styles = computedStylesMap.get(el) || {};
+
+  // Skip invisible elements
+  if (styles.display === 'none' || styles.visibility === 'hidden') return null;
+
+  // Determine node name
+  let nodeName = tag;
+  if (id) nodeName = `#${id}`;
+  else if (classes.length) nodeName = `.${classes[0]}`;
+
+  // Check if text node only
+  const hasOnlyText = el.childNodes.length > 0 &&
+    Array.from(el.childNodes).every(n => n.nodeType === 3) &&
+    el.textContent.trim();
+
+  if (hasOnlyText || ['h1','h2','h3','h4','h5','h6','p','span','a','label','button','li','td','th','strong','em','b','i','small','code','pre'].includes(tag) && el.textContent.trim() && el.children.length === 0) {
+    // TEXT node
+    const color = parseColor(styles.color) || { r: 0, g: 0, b: 0, a: 1 };
+    const fontSize = parseDimension(styles.fontSize) || 16;
+    const fontWeight = styles.fontWeight || '400';
+    const lineHeight = parseDimension(styles.lineHeight);
+    const letterSpacing = parseDimension(styles.letterSpacing);
+    const textAlign = styles.textAlign || 'left';
+
+    const alignMap = { left: 'LEFT', center: 'CENTER', right: 'RIGHT', justify: 'JUSTIFIED' };
+
+    const node = {
+      type: 'TEXT',
+      name: nodeName,
+      characters: el.textContent.trim(),
+      style: {
+        fontFamily: (styles.fontFamily || 'Inter').split(',')[0].replace(/['"]/g, '').trim(),
+        fontWeight: mapFontWeight(fontWeight),
+        fontSize: fontSize,
+        textAlignHorizontal: alignMap[textAlign] || 'LEFT',
+        fills: [{ type: 'SOLID', color: { r: color.r, g: color.g, b: color.b }, opacity: color.a }],
+      },
+    };
+
+    if (lineHeight && lineHeight !== fontSize) {
+      node.style.lineHeightPx = lineHeight;
+    }
+    if (letterSpacing) {
+      node.style.letterSpacing = letterSpacing;
+    }
+
+    currentNodeCount++;
+    return node;
+  }
+
+  // IMAGE node
+  if (tag === 'img') {
+    const w = parseDimension(styles.width) || parseDimension(el.getAttribute('width')) || 100;
+    const h = parseDimension(styles.height) || parseDimension(el.getAttribute('height')) || 100;
+    const node = {
+      type: 'RECTANGLE',
+      name: el.alt || nodeName,
+      width: w,
+      height: h,
+      fills: [{
+        type: 'IMAGE',
+        imageRef: el.src || el.getAttribute('src') || '',
+        scaleMode: styles.objectFit === 'contain' ? 'FIT' : 'FILL',
+      }],
+      ...parseBorderRadius(styles),
+    };
+    currentNodeCount++;
+    return node;
+  }
+
+  // SVG node
+  if (tag === 'svg') {
+    const w = parseDimension(styles.width) || parseDimension(el.getAttribute('width')) || 24;
+    const h = parseDimension(styles.height) || parseDimension(el.getAttribute('height')) || 24;
+    currentNodeCount++;
+    return {
+      type: 'VECTOR',
+      name: nodeName,
+      width: w,
+      height: h,
+      fills: [{ type: 'SOLID', color: parseColor(styles.fill || styles.color) || { r: 0, g: 0, b: 0, a: 1 } }],
+    };
+  }
+
+  // INPUT/TEXTAREA → Rectangle with text
+  if (tag === 'input' || tag === 'textarea') {
+    const w = parseDimension(styles.width) || 200;
+    const h = parseDimension(styles.height) || 40;
+    const bg = parseColor(styles.backgroundColor);
+    const border = parseColor(styles.borderColor);
+    currentNodeCount++;
+    return {
+      type: 'FRAME',
+      name: nodeName,
+      width: w,
+      height: h,
+      fills: bg ? [{ type: 'SOLID', color: { r: bg.r, g: bg.g, b: bg.b }, opacity: bg.a }] : [],
+      strokes: border ? [{ type: 'SOLID', color: { r: border.r, g: border.g, b: border.b } }] : [],
+      strokeWeight: parseDimension(styles.borderWidth) || 0,
+      ...parseBorderRadius(styles),
+      ...parsePadding(styles),
+      children: [{
+        type: 'TEXT',
+        name: 'placeholder',
+        characters: el.placeholder || el.value || '',
+        style: {
+          fontFamily: (styles.fontFamily || 'Inter').split(',')[0].replace(/['"]/g, '').trim(),
+          fontSize: parseDimension(styles.fontSize) || 14,
+          fills: [{ type: 'SOLID', color: parseColor(styles.color) || { r: 0.6, g: 0.6, b: 0.6, a: 1 } }],
+        },
+      }],
+    };
+  }
+
+  // FRAME node (div, section, nav, header, footer, main, article, form, ul, ol, etc.)
+  const bgColor = parseColor(styles.backgroundColor);
+  const borderColor = parseColor(styles.borderColor);
+  const borderWidth = parseDimension(styles.borderWidth) || parseDimension(styles.borderTopWidth) || 0;
+  const layoutMode = detectLayoutMode(styles);
+  const gap = parseDimension(styles.gap) || parseDimension(styles.rowGap) || 0;
+  const padding = parsePadding(styles);
+  const width = parseDimension(styles.width);
+  const height = parseDimension(styles.height);
+  const minWidth = parseDimension(styles.minWidth);
+  const minHeight = parseDimension(styles.minHeight);
+  const maxWidth = parseDimension(styles.maxWidth);
+  const opacity = styles.opacity ? parseFloat(styles.opacity) : 1;
+
+  const alignment = mapAlignment(styles.justifyContent, styles.alignItems);
+
+  // Shadow
+  let effects = [];
+  if (styles.boxShadow && styles.boxShadow !== 'none') {
+    const shadowMatch = styles.boxShadow.match(/([\d.]+)px\s+([\d.]+)px\s+([\d.]+)px\s+(?:([\d.]+)px\s+)?(.+)/);
+    if (shadowMatch) {
+      const shadowColor = parseColor(shadowMatch[5]);
+      effects.push({
+        type: 'DROP_SHADOW',
+        offset: { x: parseFloat(shadowMatch[1]), y: parseFloat(shadowMatch[2]) },
+        radius: parseFloat(shadowMatch[3]),
+        spread: shadowMatch[4] ? parseFloat(shadowMatch[4]) : 0,
+        color: shadowColor || { r: 0, g: 0, b: 0, a: 0.25 },
+        visible: true,
+      });
+    }
+  }
+
+  const node = {
+    type: 'FRAME',
+    name: nodeName,
+    layoutMode: layoutMode,
+    ...alignment,
+    itemSpacing: gap,
+    ...padding,
+    ...parseBorderRadius(styles),
+    fills: bgColor ? [{ type: 'SOLID', color: { r: bgColor.r, g: bgColor.g, b: bgColor.b }, opacity: bgColor.a }] : [],
+    strokes: borderColor && borderWidth ? [{ type: 'SOLID', color: { r: borderColor.r, g: borderColor.g, b: borderColor.b } }] : [],
+    strokeWeight: borderWidth,
+    opacity: opacity,
+    effects: effects,
+    children: [],
+  };
+
+  if (width) node.width = width;
+  if (height) node.height = height;
+  if (minWidth) node.minWidth = minWidth;
+  if (minHeight) node.minHeight = minHeight;
+  if (maxWidth) node.maxWidth = maxWidth;
+
+  currentNodeCount++;
+
+  // Process children
+  for (const child of el.childNodes) {
+    if (child.nodeType === 1) { // Element
+      const childNode = elementToFigmaNode(child, computedStylesMap, depth + 1);
+      if (childNode) node.children.push(childNode);
+    } else if (child.nodeType === 3 && child.textContent.trim()) { // Text node
+      const textContent = child.textContent.trim();
+      if (textContent) {
+        const color = parseColor(styles.color) || { r: 0, g: 0, b: 0, a: 1 };
+        node.children.push({
+          type: 'TEXT',
+          name: 'text',
+          characters: textContent,
+          style: {
+            fontFamily: (styles.fontFamily || 'Inter').split(',')[0].replace(/['"]/g, '').trim(),
+            fontSize: parseDimension(styles.fontSize) || 16,
+            fontWeight: mapFontWeight(styles.fontWeight || '400'),
+            fills: [{ type: 'SOLID', color: { r: color.r, g: color.g, b: color.b }, opacity: color.a }],
+          },
+        });
+        currentNodeCount++;
+      }
+    }
+  }
+
+  // Remove layout if no children
+  if (node.children.length === 0 && node.layoutMode) {
+    delete node.layoutMode;
+    delete node.primaryAxisAlignItems;
+    delete node.counterAxisAlignItems;
+    delete node.itemSpacing;
+  }
+
+  return node;
+}
+
+// ---- Parse HTML and extract computed styles ----
+function parseAndConvert(html) {
+  currentNodeCount = 0;
+
+  // Create hidden iframe to render the HTML and compute styles
+  const iframe = document.createElement('iframe');
+  iframe.style.cssText = 'position:absolute;left:-9999px;top:-9999px;width:1440px;height:900px;visibility:hidden;';
+  document.body.appendChild(iframe);
+
+  const doc = iframe.contentDocument;
+  doc.open();
+  doc.write(html);
+  doc.close();
+
+  // Collect computed styles
+  const stylesMap = new Map();
+  function collectStyles(el) {
+    if (el.nodeType !== 1) return;
+    const computed = iframe.contentWindow.getComputedStyle(el);
+    const styleObj = {};
+    const props = [
+      'display', 'visibility', 'opacity',
+      'width', 'height', 'minWidth', 'minHeight', 'maxWidth', 'maxHeight',
+      'backgroundColor', 'color', 'borderColor', 'borderWidth', 'borderTopWidth',
+      'borderRadius', 'borderTopLeftRadius', 'borderTopRightRadius', 'borderBottomRightRadius', 'borderBottomLeftRadius',
+      'fontSize', 'fontFamily', 'fontWeight', 'lineHeight', 'letterSpacing', 'textAlign',
+      'flexDirection', 'justifyContent', 'alignItems', 'gap', 'rowGap', 'columnGap',
+      'paddingTop', 'paddingRight', 'paddingBottom', 'paddingLeft',
+      'marginTop', 'marginRight', 'marginBottom', 'marginLeft',
+      'boxShadow', 'fill', 'objectFit',
+    ];
+    for (const p of props) {
+      try { styleObj[p] = computed[p]; } catch(e) { /* skip */ }
+    }
+    stylesMap.set(el, styleObj);
+    for (const child of el.children) collectStyles(child);
+  }
+
+  // Find root element — if it's a full document, use body; otherwise use the fragment
+  let rootEl = doc.body;
+  // Skip script/style-only bodies
+  const meaningfulChildren = Array.from(rootEl.children).filter(c =>
+    !['SCRIPT','STYLE','LINK','META','TITLE','HEAD'].includes(c.tagName)
+  );
+
+  if (meaningfulChildren.length === 1) {
+    rootEl = meaningfulChildren[0];
+  }
+
+  collectStyles(rootEl);
+
+  const figmaTree = elementToFigmaNode(rootEl, stylesMap);
+
+  document.body.removeChild(iframe);
+
+  return figmaTree;
+}
+
+// ---- Generate tree view HTML ----
+function renderTreeHTML(node, depth = 0) {
+  if (!node) return '';
+
+  const hasChildren = node.children && node.children.length > 0;
+  const typeColors = {
+    'FRAME': 'var(--orange)',
+    'TEXT': 'var(--gold)',
+    'RECTANGLE': '#87CEEB',
+    'VECTOR': '#DDA0DD',
+  };
+  const typeColor = typeColors[node.type] || 'var(--text-dim)';
+
+  let html = '<div class="tree-node">';
+  html += '<div class="tree-label">';
+
+  if (hasChildren) {
+    html += `<span class="tree-toggle" onclick="toggleTreeNode(this)">▼</span>`;
+  } else {
+    html += `<span style="width:14px;display:inline-block"></span>`;
+  }
+
+  html += `<span class="tree-tag" style="color:${typeColor}">${node.type}</span>`;
+  html += `<span class="tree-class">${escapeHtml(node.name || '')}</span>`;
+
+  if (node.type === 'TEXT') {
+    const preview = (node.characters || '').slice(0, 30);
+    html += `<span class="tree-type">"${escapeHtml(preview)}${node.characters.length > 30 ? '…' : ''}"</span>`;
+  }
+  if (node.layoutMode) {
+    html += `<span class="tree-type">${node.layoutMode}</span>`;
+  }
+  if (node.width || node.height) {
+    html += `<span class="tree-type">${node.width ? Math.round(node.width) : '?'}×${node.height ? Math.round(node.height) : '?'}</span>`;
+  }
+
+  html += '</div>';
+
+  if (hasChildren) {
+    html += '<div class="tree-children">';
+    for (const child of node.children) {
+      html += renderTreeHTML(child, depth + 1);
+    }
+    html += '</div>';
+  }
+
+  html += '</div>';
+  return html;
+}
+
+function toggleTreeNode(toggle) {
+  toggle.classList.toggle('collapsed');
+  const children = toggle.closest('.tree-node').querySelector('.tree-children');
+  if (children) children.classList.toggle('collapsed');
+}
+
+// ---- Syntax-highlighted JSON ----
+function highlightJSON(json) {
+  return json.replace(/("(\\u[a-fA-F0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g, (match) => {
+    let cls = 'json-number';
+    if (/^"/.test(match)) {
+      cls = /:$/.test(match) ? 'json-key' : 'json-string';
+    } else if (/true|false/.test(match)) {
+      cls = 'json-bool';
+    } else if (/null/.test(match)) {
+      cls = 'json-null';
+    }
+    return `<span class="${cls}">${match}</span>`;
+  });
+}
+
+// ---- Generate Figma Plugin Code ----
+function generatePluginCode(node) {
+  let code = `// Figma Plugin Code — Generated by Stitch→Figma Converter
+// Paste this into a Figma plugin's code.ts to create the design
+
+async function createFromStitch() {
+  await figma.loadFontAsync({ family: "Inter", style: "Regular" });
+  await figma.loadFontAsync({ family: "Inter", style: "Bold" });
+  await figma.loadFontAsync({ family: "Inter", style: "Medium" });
+  await figma.loadFontAsync({ family: "Inter", style: "SemiBold" });
+
+`;
+  code += generateNodeCode(node, '  ', 'root');
+  code += `
+  figma.currentPage.appendChild(root);
+  figma.viewport.scrollAndZoomIntoView([root]);
+  figma.closePlugin("Design imported from Stitch!");
+}
+
+createFromStitch();`;
+  return code;
+}
+
+function generateNodeCode(node, indent, varName) {
+  if (!node) return '';
+  let code = '';
+
+  if (node.type === 'TEXT') {
+    code += `${indent}const ${varName} = figma.createText();\n`;
+    code += `${indent}${varName}.name = ${JSON.stringify(node.name)};\n`;
+    if (node.style) {
+      const family = node.style.fontFamily || 'Inter';
+      const weight = node.style.fontWeight || 'Regular';
+      code += `${indent}await figma.loadFontAsync({ family: ${JSON.stringify(family)}, style: ${JSON.stringify(weight)} });\n`;
+      code += `${indent}${varName}.characters = ${JSON.stringify(node.characters)};\n`;
+      code += `${indent}${varName}.fontSize = ${node.style.fontSize || 16};\n`;
+      if (node.style.fills && node.style.fills.length) {
+        const f = node.style.fills[0];
+        code += `${indent}${varName}.fills = [{ type: "SOLID", color: { r: ${f.color.r.toFixed(3)}, g: ${f.color.g.toFixed(3)}, b: ${f.color.b.toFixed(3)} } }];\n`;
+      }
+      if (node.style.textAlignHorizontal) {
+        code += `${indent}${varName}.textAlignHorizontal = "${node.style.textAlignHorizontal}";\n`;
+      }
+      if (node.style.lineHeightPx) {
+        code += `${indent}${varName}.lineHeight = { value: ${node.style.lineHeightPx}, unit: "PIXELS" };\n`;
+      }
+      if (node.style.letterSpacing) {
+        code += `${indent}${varName}.letterSpacing = { value: ${node.style.letterSpacing}, unit: "PIXELS" };\n`;
+      }
+    }
+  } else if (node.type === 'RECTANGLE') {
+    code += `${indent}const ${varName} = figma.createRectangle();\n`;
+    code += `${indent}${varName}.name = ${JSON.stringify(node.name)};\n`;
+    if (node.width) code += `${indent}${varName}.resize(${node.width}, ${node.height || node.width});\n`;
+    if (node.fills) code += `${indent}${varName}.fills = ${JSON.stringify(node.fills)};\n`;
+    addCornerRadius(code, indent, varName, node);
+  } else if (node.type === 'VECTOR') {
+    code += `${indent}const ${varName} = figma.createRectangle(); // Vector placeholder\n`;
+    code += `${indent}${varName}.name = ${JSON.stringify(node.name)};\n`;
+    if (node.width) code += `${indent}${varName}.resize(${node.width}, ${node.height || node.width});\n`;
+  } else if (node.type === 'FRAME') {
+    code += `${indent}const ${varName} = figma.createFrame();\n`;
+    code += `${indent}${varName}.name = ${JSON.stringify(node.name)};\n`;
+
+    if (node.layoutMode && node.layoutMode !== 'NONE') {
+      code += `${indent}${varName}.layoutMode = "${node.layoutMode}";\n`;
+      if (node.primaryAxisAlignItems) code += `${indent}${varName}.primaryAxisAlignItems = "${node.primaryAxisAlignItems}";\n`;
+      if (node.counterAxisAlignItems) code += `${indent}${varName}.counterAxisAlignItems = "${node.counterAxisAlignItems}";\n`;
+      code += `${indent}${varName}.primaryAxisSizingMode = "AUTO";\n`;
+      code += `${indent}${varName}.counterAxisSizingMode = "AUTO";\n`;
+    }
+
+    if (node.itemSpacing) code += `${indent}${varName}.itemSpacing = ${node.itemSpacing};\n`;
+    if (node.paddingTop) code += `${indent}${varName}.paddingTop = ${node.paddingTop};\n`;
+    if (node.paddingRight) code += `${indent}${varName}.paddingRight = ${node.paddingRight};\n`;
+    if (node.paddingBottom) code += `${indent}${varName}.paddingBottom = ${node.paddingBottom};\n`;
+    if (node.paddingLeft) code += `${indent}${varName}.paddingLeft = ${node.paddingLeft};\n`;
+
+    if (node.width && !node.layoutMode) code += `${indent}${varName}.resize(${node.width}, ${node.height || 100});\n`;
+
+    if (node.fills && node.fills.length) {
+      code += `${indent}${varName}.fills = ${JSON.stringify(node.fills)};\n`;
+    } else {
+      code += `${indent}${varName}.fills = [];\n`;
+    }
+
+    if (node.strokes && node.strokes.length) {
+      code += `${indent}${varName}.strokes = ${JSON.stringify(node.strokes)};\n`;
+      code += `${indent}${varName}.strokeWeight = ${node.strokeWeight || 1};\n`;
+    }
+
+    if (node.opacity !== undefined && node.opacity < 1) {
+      code += `${indent}${varName}.opacity = ${node.opacity};\n`;
+    }
+
+    if (node.effects && node.effects.length) {
+      code += `${indent}${varName}.effects = ${JSON.stringify(node.effects)};\n`;
+    }
+
+    code = addCornerRadius(code, indent, varName, node);
+
+    // Children
+    if (node.children) {
+      node.children.forEach((child, i) => {
+        const childVar = `${varName}_child${i}`;
+        code += generateNodeCode(child, indent, childVar);
+        code += `${indent}${varName}.appendChild(${childVar});\n`;
+      });
+    }
+  }
+
+  return code;
+}
+
+function addCornerRadius(code, indent, varName, node) {
+  if (node.topLeftRadius || node.topRightRadius || node.bottomRightRadius || node.bottomLeftRadius) {
+    const tl = node.topLeftRadius || 0;
+    const tr = node.topRightRadius || 0;
+    const br = node.bottomRightRadius || 0;
+    const bl = node.bottomLeftRadius || 0;
+    if (tl === tr && tr === br && br === bl && tl > 0) {
+      code += `${indent}${varName}.cornerRadius = ${tl};\n`;
+    } else {
+      if (tl) code += `${indent}${varName}.topLeftRadius = ${tl};\n`;
+      if (tr) code += `${indent}${varName}.topRightRadius = ${tr};\n`;
+      if (br) code += `${indent}${varName}.bottomRightRadius = ${br};\n`;
+      if (bl) code += `${indent}${varName}.bottomLeftRadius = ${bl};\n`;
+    }
+  }
+  return code;
+}
+
+// ---- Utility ----
+function escapeHtml(str) {
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+// ---- UI Actions ----
+
+function convert() {
+  const html = document.getElementById('htmlInput').value.trim();
+  if (!html) {
+    showToast('Please paste HTML/CSS first');
+    return;
+  }
+
+  const btn = document.getElementById('convertBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="spin"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg> Converting...';
+  document.getElementById('outputPanel').classList.add('converting');
+  updateStatus('Converting HTML to Figma nodes...');
+
+  // Use setTimeout to allow UI update
+  setTimeout(() => {
+    try {
+      currentFigmaTree = parseAndConvert(html);
+
+      if (!currentFigmaTree) {
+        showToast('Could not parse HTML — check your input');
+        resetConvertBtn();
+        return;
+      }
+
+      // Update tree view
+      document.getElementById('treeOutput').innerHTML = renderTreeHTML(currentFigmaTree);
+      document.getElementById('emptyState')?.remove();
+
+      // Update JSON view
+      const jsonStr = JSON.stringify(currentFigmaTree, null, 2);
+      document.getElementById('jsonPre').innerHTML = highlightJSON(escapeHtml(jsonStr));
+
+      // Update plugin code view
+      const pluginCode = generatePluginCode(currentFigmaTree);
+      document.getElementById('pluginPre').innerHTML = escapeHtml(pluginCode);
+
+      // Update preview
+      document.getElementById('previewFrame').srcdoc = html;
+
+      // Show controls
+      document.getElementById('nodeCount').style.display = 'inline';
+      document.getElementById('nodeCount').textContent = `${currentNodeCount} nodes`;
+      document.getElementById('copyBtn').style.display = 'flex';
+      document.getElementById('downloadBtn').style.display = 'flex';
+
+      updateStatus(`Converted — ${currentNodeCount} Figma nodes generated`);
+      showToast(`Converted to ${currentNodeCount} Figma nodes`);
+
+    } catch (err) {
+      console.error(err);
+      showToast('Conversion error: ' + err.message);
+      updateStatus('Error during conversion');
+    }
+
+    resetConvertBtn();
+    document.getElementById('outputPanel').classList.remove('converting');
+  }, 50);
+}
+
+function resetConvertBtn() {
+  const btn = document.getElementById('convertBtn');
+  btn.disabled = false;
+  btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Convert';
+}
+
+function switchTab(tab) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelector(`[data-tab="${tab}"]`).classList.add('active');
+
+  document.getElementById('treeOutput').style.display = tab === 'tree' ? '' : 'none';
+  document.getElementById('jsonOutput').style.display = tab === 'json' ? '' : 'none';
+  document.getElementById('previewOutput').style.display = tab === 'preview' ? '' : 'none';
+  document.getElementById('pluginOutput').style.display = tab === 'plugin' ? '' : 'none';
+}
+
+function copyOutput() {
+  if (!currentFigmaTree) return;
+
+  const activeTab = document.querySelector('.tab.active').dataset.tab;
+  let text;
+  if (activeTab === 'plugin') {
+    text = generatePluginCode(currentFigmaTree);
+  } else {
+    text = JSON.stringify(currentFigmaTree, null, 2);
+  }
+
+  navigator.clipboard.writeText(text).then(() => {
+    showToast(activeTab === 'plugin' ? 'Plugin code copied!' : 'Figma JSON copied to clipboard!');
+  }).catch(() => {
+    // Fallback
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+    showToast('Copied!');
+  });
+}
+
+function downloadOutput() {
+  if (!currentFigmaTree) return;
+
+  const activeTab = document.querySelector('.tab.active').dataset.tab;
+  let content, filename;
+  if (activeTab === 'plugin') {
+    content = generatePluginCode(currentFigmaTree);
+    filename = 'stitch-to-figma-plugin.ts';
+  } else {
+    content = JSON.stringify(currentFigmaTree, null, 2);
+    filename = 'stitch-figma-nodes.json';
+  }
+
+  const blob = new Blob([content], { type: 'text/plain' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast(`Downloaded ${filename}`);
+}
+
+function clearInput() {
+  document.getElementById('htmlInput').value = '';
+  document.getElementById('treeOutput').innerHTML = `
+    <div class="empty-state" id="emptyState">
+      <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1">
+        <rect x="3" y="3" width="7" height="7" rx="1"/>
+        <rect x="14" y="3" width="7" height="7" rx="1"/>
+        <rect x="3" y="14" width="7" height="7" rx="1"/>
+        <rect x="14" y="14" width="7" height="7" rx="1"/>
+        <line x1="10" y1="6.5" x2="14" y2="6.5"/>
+        <line x1="6.5" y1="10" x2="6.5" y2="14"/>
+      </svg>
+      <p>Paste Stitch HTML/CSS and click <strong>Convert</strong></p>
+      <p class="hint">Your HTML will be parsed into a Figma-compatible node tree</p>
+    </div>`;
+  document.getElementById('jsonPre').innerHTML = '';
+  document.getElementById('pluginPre').innerHTML = '';
+  document.getElementById('previewFrame').srcdoc = '';
+  document.getElementById('nodeCount').style.display = 'none';
+  document.getElementById('copyBtn').style.display = 'none';
+  document.getElementById('downloadBtn').style.display = 'none';
+  currentFigmaTree = null;
+  currentNodeCount = 0;
+  updateStatus('Paste HTML to begin');
+}
+
+function loadSample() {
+  const sampleHTML = `<div style="font-family: Inter, sans-serif; max-width: 480px; background: #1a1a2e; border-radius: 16px; padding: 32px; color: white; box-shadow: 0 20px 60px rgba(0,0,0,0.3);">
+  <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 24px;">
+    <div style="width: 48px; height: 48px; border-radius: 12px; background: linear-gradient(135deg, #667eea, #764ba2); display: flex; align-items: center; justify-content: center;">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+    </div>
+    <div>
+      <h2 style="margin: 0; font-size: 18px; font-weight: 600;">Dashboard Pro</h2>
+      <p style="margin: 0; font-size: 13px; color: #888;">Analytics & Insights</p>
+    </div>
+  </div>
+  <div style="display: flex; gap: 12px; margin-bottom: 24px;">
+    <div style="flex: 1; background: rgba(255,255,255,0.05); border-radius: 12px; padding: 16px;">
+      <p style="margin: 0 0 4px; font-size: 12px; color: #888;">Revenue</p>
+      <p style="margin: 0; font-size: 24px; font-weight: 700;">$48.2k</p>
+      <p style="margin: 4px 0 0; font-size: 12px; color: #4ade80;">+12.5%</p>
+    </div>
+    <div style="flex: 1; background: rgba(255,255,255,0.05); border-radius: 12px; padding: 16px;">
+      <p style="margin: 0 0 4px; font-size: 12px; color: #888;">Users</p>
+      <p style="margin: 0; font-size: 24px; font-weight: 700;">2,847</p>
+      <p style="margin: 4px 0 0; font-size: 12px; color: #4ade80;">+8.3%</p>
+    </div>
+  </div>
+  <button style="width: 100%; padding: 14px; border: none; border-radius: 10px; background: linear-gradient(135deg, #667eea, #764ba2); color: white; font-size: 15px; font-weight: 600; cursor: pointer;">View Full Report</button>
+</div>`;
+
+  document.getElementById('htmlInput').value = sampleHTML;
+  updateStatus('Sample loaded — click Convert');
+  showToast('Sample Stitch output loaded');
+}
+
+function openSettings() {
+  document.getElementById('settingsModal').classList.add('show');
+}
+
+function closeSettings() {
+  document.getElementById('settingsModal').classList.remove('show');
+}
+
+function updateStatus(text) {
+  document.getElementById('statusText').textContent = text;
+}
+
+function showToast(msg) {
+  const toast = document.getElementById('toast');
+  toast.textContent = msg;
+  toast.classList.add('show');
+  setTimeout(() => toast.classList.remove('show'), 2500);
+}
+
+// ---- Drag & Drop ----
+const editorArea = document.getElementById('editorArea');
+editorArea.addEventListener('dragover', (e) => {
+  e.preventDefault();
+  editorArea.classList.add('dragover');
+});
+editorArea.addEventListener('dragleave', () => {
+  editorArea.classList.remove('dragover');
+});
+editorArea.addEventListener('drop', (e) => {
+  e.preventDefault();
+  editorArea.classList.remove('dragover');
+  const file = e.dataTransfer.files[0];
+  if (file && (file.type === 'text/html' || file.name.endsWith('.html'))) {
+    const reader = new FileReader();
+    reader.onload = () => {
+      document.getElementById('htmlInput').value = reader.result;
+      updateStatus('File loaded — click Convert');
+      showToast(`Loaded ${file.name}`);
+    };
+    reader.readAsText(file);
+  } else {
+    showToast('Please drop an HTML file');
+  }
+});
+
+// ---- Keyboard shortcut ----
+document.addEventListener('keydown', (e) => {
+  if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+    e.preventDefault();
+    convert();
+  }
+  if (e.key === 'Escape') {
+    closeSettings();
+  }
+});
+
+// Close modal on overlay click
+document.getElementById('settingsModal').addEventListener('click', (e) => {
+  if (e.target === document.getElementById('settingsModal')) closeSettings();
+});
+
+// Add spin animation
+const style = document.createElement('style');
+style.textContent = `@keyframes spin { to { transform: rotate(360deg); } } .spin { animation: spin 0.8s linear infinite; }`;
+document.head.appendChild(style);
+</script>
+</body>
+</html>
